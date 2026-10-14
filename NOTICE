@@ -1,0 +1,12 @@
+ViWeb WireGuard
+Derived from wg-easy 15.4.0 (https://github.com/wg-easy/wg-easy),
+source commit 2f9751e302acf78fd560417fd2dfbf224b2174c8,
+Copyright (c) wg-easy contributors, licensed under AGPL-3.0-only.
+
+Modification: the initial MTU seed values (1420 -> 1412) in
+src/server/database/migrations/0001_classy_the_stranger.sql, applied at image
+build time by scripts/patch-default-mtu.mjs. See UPSTREAM.md.
+
+This project is licensed under AGPL-3.0-only (see LICENSE).
+WireGuard is a registered trademark of Jason A. Donenfeld. This project is not
+affiliated with WireGuard or wg-easy.

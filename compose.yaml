@@ -1,0 +1,62 @@
+# ViWeb WireGuard - wg-easy 15.4.0 with an initial MTU of 1412.
+# Copy .env.example to .env to change ports or subnets. No secrets belong in .env.
+name: viweb-wireguard
+
+services:
+  wg-easy:
+    build: .
+    image: viweb-wireguard:15.4.0-mtu1412
+    restart: unless-stopped
+    environment:
+      # Plain HTTP is accepted ONLY because the UI is published on loopback
+      # (reach it through an SSH tunnel or a local TLS reverse proxy).
+      INSECURE: "true"
+    ports:
+      # Web admin UI: loopback only. Do not change to 0.0.0.0.
+      - "127.0.0.1:${WG_UI_PORT:-51821}:51821/tcp"
+      # WireGuard: host and container port must be identical and must equal the
+      # port entered during onboarding / Admin Panel > Interface > Port.
+      - "${WG_PORT:-51820}:${WG_PORT:-51820}/udp"
+    volumes:
+      - wireguard-data:/etc/wireguard
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.src_valid_mark: "1"
+      net.ipv6.conf.all.disable_ipv6: "0"
+      net.ipv6.conf.all.forwarding: "1"
+      net.ipv6.conf.default.forwarding: "1"
+    networks:
+      wg:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      # Web UI answers locally and the wg0 interface is up. Output is discarded
+      # so no keys end up in `docker inspect`.
+      test:
+        - CMD-SHELL
+        - >-
+          node -e "fetch('http://127.0.0.1:51821/').then(r=>process.exit(r.status<500?0:1),()=>process.exit(1))"
+          && /usr/bin/wg show wg0 listen-port >/dev/null 2>&1
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+      start_interval: 5s
+
+networks:
+  wg:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: ${WG_DOCKER_IPV4_SUBNET:-10.42.42.0/24}
+        - subnet: ${WG_DOCKER_IPV6_SUBNET:-fdcc:ad94:bacf:61a3::/64}
+
+volumes:
+  wireguard-data:

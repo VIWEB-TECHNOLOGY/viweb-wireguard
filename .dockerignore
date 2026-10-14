@@ -1,0 +1,3 @@
+# Only scripts/patch-default-mtu.mjs is needed in the build context.
+*
+!scripts/patch-default-mtu.mjs
