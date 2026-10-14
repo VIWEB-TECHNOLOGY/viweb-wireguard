@@ -1,11 +1,12 @@
 # ViWeb WireGuard - wg-easy 15.4.0 with an initial MTU of 1412.
 # Copy .env.example to .env to change ports or subnets. No secrets belong in .env.
+# Uses the published image; to build from source instead, add the override:
+#   docker compose -f compose.yaml -f compose.build.yaml up -d --build
 name: viweb-wireguard
 
 services:
   wg-easy:
-    build: .
-    image: viweb-wireguard:15.4.0-mtu1412
+    image: ghcr.io/viweb-technology/viweb-wireguard:15.4.0-mtu1412
     restart: unless-stopped
     environment:
       # Plain HTTP is accepted ONLY because the UI is published on loopback

@@ -28,17 +28,65 @@ License: **AGPL-3.0-only** (same as upstream, see [LICENSE](LICENSE)).
 
 Tested on a local arm64 Linux Docker VM: image build, authenticated settings,
 restart persistence, IPv4/IPv6 tunnel traffic and forwarded IPv4 egress.
-The amd64 manifest of the pinned digest exists but amd64 runtime is untested.
+The amd64 manifest of the pinned base digest exists but amd64 runtime is untested.
 Rootless Docker and Docker Desktop (macOS/Windows) are not supported deployment
 targets; VM networking and public UDP reachability require separate validation.
 
-## Quickstart
+## Image
+
+```text
+ghcr.io/viweb-technology/viweb-wireguard:15.4.0-mtu1412
+```
 
 ```sh
-cp .env.example .env          # optional: ports and Docker subnets only, no secrets
-docker compose build
-docker compose up -d
+docker pull ghcr.io/viweb-technology/viweb-wireguard:15.4.0-mtu1412
 ```
+
+The image is built and published by the release workflow from the
+`v15.4.0-mtu1412` tag for `linux/amd64` and `linux/arm64`. Runtime has been
+validated on arm64 only; amd64 runtime is untested. There is no `latest` tag.
+
+## Quickstart
+
+From an empty folder; no git, compiler or Dockerfile needed:
+
+```sh
+mkdir viweb-wireguard
+cd viweb-wireguard
+curl -fsSL https://raw.githubusercontent.com/VIWEB-TECHNOLOGY/viweb-wireguard/v15.4.0-mtu1412/compose.yaml -o compose.yaml
+# optional: ports and Docker subnets only, no secrets
+curl -fsSL https://raw.githubusercontent.com/VIWEB-TECHNOLOGY/viweb-wireguard/v15.4.0-mtu1412/.env.example -o .env
+docker compose pull
+docker compose up -d --no-build
+```
+
+### Pinning by digest (optional)
+
+Version tags such as `15.4.0-mtu1412` are not guaranteed to be immutable. To pin
+exactly what you reviewed, look up the published multi-arch index digest and
+use it in `compose.yaml`:
+
+```sh
+docker buildx imagetools inspect ghcr.io/viweb-technology/viweb-wireguard:15.4.0-mtu1412
+# image: ghcr.io/viweb-technology/viweb-wireguard:15.4.0-mtu1412@sha256:<index digest shown above>
+```
+
+Use the top-level `Digest:` of the index, not a per-platform manifest digest.
+
+### Building from source
+
+```sh
+git clone https://github.com/VIWEB-TECHNOLOGY/viweb-wireguard.git
+cd viweb-wireguard
+git checkout v15.4.0-mtu1412
+cp .env.example .env          # optional
+docker compose -f compose.yaml -f compose.build.yaml build
+docker compose -f compose.yaml -f compose.build.yaml up -d
+```
+
+`compose.build.yaml` builds the local image `viweb-wireguard:15.4.0-mtu1412`
+with `pull_policy: build`, so Compose never pulls it from the registry. Pass
+both `-f` files on every later command for that deployment.
 
 The admin UI is published on **127.0.0.1 only** (`WG_UI_PORT`, default 51821).
 From your workstation, open an SSH tunnel and browse locally:
@@ -138,7 +186,7 @@ mkdir -p backups
 chmod 700 backups
 docker run --rm --entrypoint tar \
   -v viweb-wireguard_wireguard-data:/etc/wireguard:ro \
-  viweb-wireguard:15.4.0-mtu1412 -czf - -C /etc/wireguard . \
+  ghcr.io/viweb-technology/viweb-wireguard:15.4.0-mtu1412 -czf - -C /etc/wireguard . \
   > backups/wireguard-data.tar.gz
 tar -tzf backups/wireguard-data.tar.gz >/dev/null
 docker compose start
@@ -150,14 +198,18 @@ Restore offline into a **fresh** volume (for example on a new host, before the
 first `up`):
 
 ```sh
-docker compose build
+docker compose pull
 docker volume create viweb-wireguard_wireguard-data
 docker run --rm -i --entrypoint tar \
   -v viweb-wireguard_wireguard-data:/etc/wireguard \
-  viweb-wireguard:15.4.0-mtu1412 -xzf - -C /etc/wireguard \
+  ghcr.io/viweb-technology/viweb-wireguard:15.4.0-mtu1412 -xzf - -C /etc/wireguard \
   < backups/wireguard-data.tar.gz
-docker compose up -d
+docker compose up -d --no-build
 ```
+
+If you built from source, replace the helper image with the local
+`viweb-wireguard:15.4.0-mtu1412` and use the `-f compose.yaml -f compose.build.yaml`
+build instead of `pull`. If you pinned a digest, use the same reference here.
 
 These volume names assume the default Compose project name. If you use `-p`,
 confirm the actual volume name before backing up or restoring. Restore only
@@ -178,7 +230,9 @@ with all keys and clients.
 ## Contributing
 
 Run `node --test tests/*.test.mjs` (Node 24; `node:sqlite` may print an
-experimental warning) and `docker compose config` before proposing changes.
+experimental warning), `docker compose config` and
+`docker compose -f compose.yaml -f compose.build.yaml config` before proposing
+changes.
 Keep the project thin: changes to upstream behaviour beyond the MTU seed belong
 upstream in wg-easy.
 
@@ -197,4 +251,15 @@ upstream in wg-easy.
 
 These checks used disposable containers and volumes, not a production gateway.
 Public Internet ingress, IPv6 Internet egress, throughput, amd64 runtime and a
-live-host migration remain untested. CI builds and tests; it does not publish.
+live-host migration remain untested. The test suite has since grown to 19
+tests, all passing.
+
+### CI and releases
+
+CI runs the tests and Compose checks on pushes and pull requests; it does not
+publish images. Only pushing a `v*` release tag (for example `v15.4.0-mtu1412`)
+runs the publish workflow: it validates that the tag matches the pinned
+version, runs the tests and Compose config, then builds `linux/amd64` and
+`linux/arm64` and pushes the version tag plus a `sha-<commit>` tag, with
+provenance and SBOM attestations. Nothing is published for `latest` or on
+pushes to `main`.

@@ -17,5 +17,6 @@ RUN node /opt/viweb-wireguard/patch-default-mtu.mjs /app/server/database/migrati
 LABEL org.opencontainers.image.title="ViWeb WireGuard" \
       org.opencontainers.image.description="wg-easy 15.4.0 with an initial default MTU of 1412 (UI-editable)" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
+      org.opencontainers.image.source="https://github.com/VIWEB-TECHNOLOGY/viweb-wireguard" \
       org.opencontainers.image.base.name="ghcr.io/wg-easy/wg-easy:15.4.0" \
       org.opencontainers.image.base.digest="sha256:0e7bc9d34e86ddcaa92bc700d4d7dc9b33291dbc07ac8d13382f7c2095f949ec"

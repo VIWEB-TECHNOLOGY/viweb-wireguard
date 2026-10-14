@@ -11,8 +11,13 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const read = (f) => readFileSync(join(ROOT, f), 'utf8');
 const hasCompose = spawnSync('docker', ['compose', 'version']).status === 0;
 
-function composeConfig(env = {}) {
-  const r = spawnSync('docker', ['compose', '-f', join(ROOT, 'compose.yaml'), 'config', '--format', 'json'], {
+const PUBLISHED = 'ghcr.io/viweb-technology/viweb-wireguard:15.4.0-mtu1412';
+const LOCAL = 'viweb-wireguard:15.4.0-mtu1412';
+const SOURCE = ['compose.yaml', 'compose.build.yaml'];
+
+function composeConfig(env = {}, files = ['compose.yaml']) {
+  const args = ['compose', ...files.flatMap((f) => ['-f', join(ROOT, f)]), 'config', '--format', 'json'];
+  const r = spawnSync('docker', args, {
     encoding: 'utf8',
     cwd: ROOT,
     env: { ...process.env, WG_PORT: '', WG_UI_PORT: '', ...env },
@@ -55,6 +60,27 @@ test('compose defaults: loopback UI, UDP 51820, NET_ADMIN only', { skip: !hasCom
 
 test('compose overrides keep loopback and matching UDP ports', { skip: !hasCompose && 'docker compose not available' }, () => {
   assertBounds(composeConfig({ WG_PORT: '443', WG_UI_PORT: '8443' }), { udp: 443, ui: 8443 });
+});
+
+test('default compose pulls the published image and never builds', { skip: !hasCompose && 'docker compose not available' }, () => {
+  const svc = composeConfig();
+  assert.equal(svc.image, PUBLISHED);
+  assert.ok(!('build' in svc), 'default compose must not build');
+  assert.ok(!svc.pull_policy || svc.pull_policy !== 'build');
+});
+
+test('source override builds a local tag and keeps all bounds', { skip: !hasCompose && 'docker compose not available' }, () => {
+  const svc = composeConfig({}, SOURCE);
+  assert.equal(svc.build?.context?.replace(/\/$/, ''), ROOT.replace(/\/$/, ''));
+  assert.equal(svc.image, LOCAL, 'local tag must not shadow the registry image');
+  assert.equal(svc.pull_policy, 'build');
+  assertBounds(svc, { udp: 51820, ui: 51821 });
+  assertBounds(composeConfig({ WG_PORT: '443', WG_UI_PORT: '8443' }, SOURCE), { udp: 443, ui: 8443 });
+});
+
+test('static: source override only adds build settings', () => {
+  const lines = read('compose.build.yaml').split('\n').filter((l) => l.trim() && !l.trim().startsWith('#'));
+  assert.deepEqual(lines.map((l) => l.trim()), ['services:', 'wg-easy:', 'build: .', `image: ${LOCAL}`, 'pull_policy: build']);
 });
 
 test('static: compose has no public admin bind and no forbidden settings', () => {

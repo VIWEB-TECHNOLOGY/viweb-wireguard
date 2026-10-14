@@ -45,13 +45,39 @@ diff -u /tmp/orig.sql /tmp/patched.sql
 
 ## Building
 
+The default `compose.yaml` pulls
+`ghcr.io/viweb-technology/viweb-wireguard:15.4.0-mtu1412`; it has no build step.
+For a local source build, add the developer override:
+
 ```sh
-docker compose build        # or: docker build -t viweb-wireguard:15.4.0-mtu1412 .
+docker compose -f compose.yaml -f compose.build.yaml build
+docker compose -f compose.yaml -f compose.build.yaml up -d
+# or build the image alone:
+docker build -t viweb-wireguard:15.4.0-mtu1412 .
 ```
+
+The source override uses a separate local image name and `pull_policy: build`.
+Keep passing both Compose files when managing a source deployment.
 
 The complete corresponding source of the running image is the upstream commit
 above plus this repository. If you run a modified version as a network service,
 AGPL section 13 requires offering your users its source.
+
+## Publishing a derived image
+
+After updating the image version in Compose and documentation, push a matching
+`v<version>` Git tag, for example `v15.4.0-mtu1412`. The publication workflow
+validates the tag and Compose image, runs the tests, and builds/pushes
+`linux/amd64` and `linux/arm64` using the repository's `GITHUB_TOKEN`.
+It publishes the version and `sha-<commit>` tags with provenance/SBOM attestations.
+The image's OCI source/revision labels identify this repository and commit;
+the pinned base digest above identifies the upstream image.
+
+GitHub initially makes new packages private. A package administrator must make
+the package public before anonymous users can pull it. Verify an anonymous pull
+before announcing a new package. Ordinary pushes to `main` do not publish, and
+there is no `latest` tag. Published version tags can be replaced; use the
+multi-platform index digest when an immutable deployment reference is required.
 
 ## Upgrading the base image
 

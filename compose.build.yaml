@@ -1,0 +1,11 @@
+# Developer override: build the image from this source tree instead of pulling
+# the published one. Use together with compose.yaml:
+#   docker compose -f compose.yaml -f compose.build.yaml build
+#   docker compose -f compose.yaml -f compose.build.yaml up -d
+# The local tag below never matches the registry name, and pull_policy: build
+# makes Compose build rather than pull it.
+services:
+  wg-easy:
+    build: .
+    image: viweb-wireguard:15.4.0-mtu1412
+    pull_policy: build
