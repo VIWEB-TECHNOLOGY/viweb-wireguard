@@ -1,5 +1,9 @@
 # ViWeb WireGuard
 
+[![CI](https://github.com/VIWEB-TECHNOLOGY/viweb-wireguard/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/VIWEB-TECHNOLOGY/viweb-wireguard/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/VIWEB-TECHNOLOGY/viweb-wireguard)](https://github.com/VIWEB-TECHNOLOGY/viweb-wireguard/releases/latest)
+[![GHCR](https://img.shields.io/badge/GHCR-image-blue?logo=docker&logoColor=white)](https://github.com/VIWEB-TECHNOLOGY/viweb-wireguard/pkgs/container/viweb-wireguard)
+
 A thin, derived Docker template of [wg-easy](https://github.com/wg-easy/wg-easy)
 **15.4.0** — a WireGuard VPN server with a web admin UI — whose only change is
 an **initial default MTU of 1412** instead of 1420.
